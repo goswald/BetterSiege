@@ -1,10 +1,14 @@
-name: EfficientStorage
+name: BetterSiege
 version: 1.0
-main: efficientstorage.EfficientStorage
-description: Provides a better way to store information
+main: bettersiege.BetterSiege
+description: A custom siege plugin for CI.
 commands:
-  Permission:
-    description: Use /Permission for EfficientStorage commands.
+  sHelp:
+    description: Provides general help for the plugin.
 permissions:
-  EfficientStorage*:
+  BetterSiege*:
+    default: false
+  buildCatapult:
+    default: false
+  Catapult:
     default: false

@@ -1,7 +1,9 @@
 package bettersiege;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -11,23 +13,26 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class BetterSiege extends JavaPlugin{
+    //Useful things for the entire class
     Functions f = new Functions();
-    ArrayList<Player> moveList = new ArrayList();
     HashMap<Location, Catapult> CatapultMap = new HashMap<>();
     HashMap<Player, Catapult> pCatapultMap = new HashMap<>();
+    ScheduledExecutorService sES = Executors.newScheduledThreadPool(1);
+        public void inCatapult() {
+    }
     
     Logger BetterSiegeLogger= Bukkit.getLogger();
     @Override
     public void onEnable() {
-        BetterSiegeLogger.info("Here's some message spam. BukkitPractice works.");
+        BetterSiegeLogger.info("BetterSiege has been enabled.");
     }
     @Override
     public void onDisable() {
-        BetterSiegeLogger.info("BukkitPractice has been disabled. WHAT HAVE YOU DONE?");
+        sES.shutdown();
+        BetterSiegeLogger.info("BetterSiege has been disabled.");
     }
     @EventHandler
     public void onLeftClick(PlayerInteractEvent e) {
@@ -35,19 +40,19 @@ public class BetterSiege extends JavaPlugin{
         {
             Sign s = (Sign)e.getClickedBlock();
             if(s.getLine(0).equalsIgnoreCase("Catapult")) {
-                if(f.isCatapult(e.getClickedBlock().getLocation())) {
+                //Not all things that say catapult meet the requirements to be a catapult -- the sign placed with proper perms and a correct structure
+                if(CatapultMap.containsKey(e.getClickedBlock().getLocation()) && f.isCatapult(e.getClickedBlock().getLocation())) {
                     if(e.getPlayer().hasPermission("BetterSiege*") || e.getPlayer().hasPermission("Catapult")) {
-                        moveList.add(e.getPlayer());
                         pCatapultMap.put(e.getPlayer(), CatapultMap.get(e.getClickedBlock().getLocation()));
+                        sES.scheduleWithFixedDelay(new Runnable() {
+                        public void run() {
+                            
+                        }}, 0, 500, TimeUnit.MILLISECONDS);
                     }
                     else e.getPlayer().sendMessage("You cannot operate a catapult.");
                 }
             }
         }
-    }
-    @EventHandler
-    public void onPlayerMove(PlayerMoveEvent e) {
-        if(moveList.contains(e.getPlayer())) e.setCancelled(true);
     }
     @Override
     public boolean onCommand(CommandSender theSender, Command cmd, String commandLabel, String[] args) {

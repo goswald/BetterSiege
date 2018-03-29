@@ -44,10 +44,7 @@ public class BetterSiege extends JavaPlugin{
                 if(CatapultMap.containsKey(e.getClickedBlock().getLocation()) && f.isCatapult(e.getClickedBlock().getLocation())) {
                     if(e.getPlayer().hasPermission("BetterSiege*") || e.getPlayer().hasPermission("Catapult")) {
                         pCatapultMap.put(e.getPlayer(), CatapultMap.get(e.getClickedBlock().getLocation()));
-                        sES.scheduleWithFixedDelay(new Runnable() {
-                        public void run() {
-                            
-                        }}, 0, 500, TimeUnit.MILLISECONDS);
+                        sES.scheduleWithFixedDelay(new catapultRunnable(e.getPlayer(), CatapultMap.get(e.getClickedBlock())), 0, 500, TimeUnit.MILLISECONDS);
                     }
                     else e.getPlayer().sendMessage("You cannot operate a catapult.");
                 }
@@ -68,5 +65,13 @@ public class BetterSiege extends JavaPlugin{
             
         }
         return true;
+    }
+    public class catapultRunnable implements Runnable {
+        public catapultRunnable(Player p, Catapult c) {};
+        
+        @Override
+        public void run() {
+            
+        }
     }
 }

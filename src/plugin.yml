@@ -1,0 +1,10 @@
+name: EfficientStorage
+version: 1.0
+main: efficientstorage.EfficientStorage
+description: Provides a better way to store information
+commands:
+  Permission:
+    description: Use /Permission for EfficientStorage commands.
+permissions:
+  EfficientStorage*:
+    default: false

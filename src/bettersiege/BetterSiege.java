@@ -20,7 +20,6 @@ public class BetterSiege extends JavaPlugin{
     Functions f = new Functions();
     HashMap<Location, Catapult> CatapultMap = new HashMap<>();
     HashMap<Player, Catapult> pCatapultMap = new HashMap<>();
-    ScheduledExecutorService sES = Executors.newScheduledThreadPool(1);
         public void inCatapult() {
     }
     
@@ -31,7 +30,6 @@ public class BetterSiege extends JavaPlugin{
     }
     @Override
     public void onDisable() {
-        sES.shutdown();
         BetterSiegeLogger.info("BetterSiege has been disabled.");
     }
     @EventHandler
@@ -44,7 +42,9 @@ public class BetterSiege extends JavaPlugin{
                 if(CatapultMap.containsKey(e.getClickedBlock().getLocation()) && f.isCatapult(e.getClickedBlock().getLocation())) {
                     if(e.getPlayer().hasPermission("BetterSiege*") || e.getPlayer().hasPermission("Catapult")) {
                         pCatapultMap.put(e.getPlayer(), CatapultMap.get(e.getClickedBlock().getLocation()));
-                        sES.scheduleWithFixedDelay(new catapultRunnable(e.getPlayer(), CatapultMap.get(e.getClickedBlock())), 0, 500, TimeUnit.MILLISECONDS);
+                        ScheduledExecutorService sES = Executors.newScheduledThreadPool(1);
+                        sES.scheduleWithFixedDelay(new catapultRunnable(e.getPlayer(), CatapultMap.get(e.getClickedBlock().getLocation()), sES, e.getPlayer().getLocation(), e.getPlayer().getHealth(), e.getPlayer().getFoodLevel()), 1, 1, TimeUnit.SECONDS);
+                        e.getPlayer().sendMessage("You are now operating the catapult.");
                     }
                     else e.getPlayer().sendMessage("You cannot operate a catapult.");
                 }
@@ -67,11 +67,36 @@ public class BetterSiege extends JavaPlugin{
         return true;
     }
     public class catapultRunnable implements Runnable {
-        public catapultRunnable(Player p, Catapult c) {};
+        Player p;
+        Catapult c;
+        ScheduledExecutorService end;
+        Location l;
+        double pHealth;
+        int pHunger;
+        
+        public catapultRunnable(Player player, Catapult catapult, ScheduledExecutorService selfTerminate, Location previous, double playerHealth, int playerHunger) {
+            p = player;
+            c = catapult;
+            end = selfTerminate;
+            l = previous;
+            pHealth = playerHealth;
+            pHunger = playerHunger;
+        };
         
         @Override
         public void run() {
-            
+            if(c.isEnded) {
+                c.resetCharge();
+                p.setHealth(pHealth);
+                p.setFoodLevel(pHunger);
+                pCatapultMap.remove(p);
+                end.shutdown();
+            }
+            int health = c.getHealth();
+            if(health > 0) p.setHealth(health);
+            else c.end();
+            p.setFoodLevel(c.addCharge());
+            p.teleport(l);
         }
     }
 }

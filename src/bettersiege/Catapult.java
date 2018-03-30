@@ -5,6 +5,7 @@ public class Catapult {
     int health = 100;
     int charge = 0;
     boolean isDestroyed = false;
+    boolean isEnded = false;
     
     void fetchData() {
         
@@ -22,13 +23,22 @@ public class Catapult {
     int getHealth() {
         return health;
     }
-    boolean addCharge() {
-        charge = charge + 1;
-        if(charge == 20) return true;
-        return false;
+    void resetCharge() {
+        charge = 0;
+    }
+    int addCharge() {
+        charge = charge + 4;
+        if(charge < 20) charge = 20;
+        return charge;
     }
     boolean isCharged() {
         if(charge == 20) return true;
         return false;
+    }
+    void end() {
+        isEnded = true;
+    }
+    boolean isEnded() {
+        return isEnded;
     }
 }

@@ -6,9 +6,9 @@ commands:
   sHelp:
     description: Provides general help for the plugin.
 permissions:
-  BetterSiege*:
+  BetterSiege.*:
     default: false
-  buildCatapult:
+  BetterSiege.buildCatapult:
     default: false
-  Catapult:
+  BetterSiege.Catapult:
     default: false

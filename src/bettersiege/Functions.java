@@ -1,6 +1,9 @@
 package bettersiege;
 
+import java.io.InputStream;
 import java.util.ArrayList;
+import net.minecraft.server.v1_12_R1.NBTCompressedStreamTools;
+import net.minecraft.server.v1_12_R1.NBTTagCompound;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -13,35 +16,21 @@ public class Functions {
     //not yet detailed
     boolean isCatapult(Location l)
     {
-        return true;
-    }
-    //borrowed from sk89q's code. It's under GNU, so everything's fine
-    public static String getCardinalDirection(Player player) {
-        double rotation = (player.getLocation().getYaw() - 90) % 360;
-        if (rotation < 0) {
-            rotation += 360.0;
+        try {
+            for(int i = 0; i < 4; i++) {
+                InputStream fis = getClass().getResourceAsStream("plugins" + '\\' + "BetterSiege" + '\\' + "Catapult" + Integer.toString(i) + ".schematic");
+                NBTTagCompound nbtdata = NBTCompressedStreamTools.a(fis);;
+                short width = nbtdata.getShort("Width");
+                short height = nbtdata.getShort("Height");
+                short length = nbtdata.getShort("Length");
+                byte[] blocks = nbtdata.getByteArray("Blocks");
+                fis.close();
+            }
         }
-         if (0 <= rotation && rotation < 22.5) {
-            return "N";
-        } else if (22.5 <= rotation && rotation < 67.5) {
-            return "NE";
-        } else if (67.5 <= rotation && rotation < 112.5) {
-            return "E";
-        } else if (112.5 <= rotation && rotation < 157.5) {
-            return "SE";
-        } else if (157.5 <= rotation && rotation < 202.5) {
-            return "S";
-        } else if (202.5 <= rotation && rotation < 247.5) {
-            return "SW";
-        } else if (247.5 <= rotation && rotation < 292.5) {
-            return "W";
-        } else if (292.5 <= rotation && rotation < 337.5) {
-            return "NW";
-        } else if (337.5 <= rotation && rotation < 360.0) {
-            return "N";
-        } else {
-            return null;
+        catch(Exception e) {
+            e.printStackTrace();
         }
+        return false;
     }
     //calculates the vector for the catapult bolt
     Vector catapultProjectile(Player p, double d, double d2) {

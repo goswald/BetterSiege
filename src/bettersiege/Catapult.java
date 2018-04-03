@@ -14,7 +14,7 @@ public class Catapult {
     int charge = 0;
     int ammunition = 0;
     Location l;
-    String direction;
+    List<Location> blocks;
     boolean isEnded = false;
     
     void fetchData(FileConfiguration config, String section, Server server) {
@@ -23,7 +23,6 @@ public class Catapult {
         health = Integer.parseInt(data.get(0));
         charge = Integer.parseInt(data.get(1));
         ammunition = Integer.parseInt(data.get(2));
-        direction = data.get(3);
         l = new Location(server.getWorld(sec.getString("location.World")), sec.getDouble("location.X"), sec.getDouble("location.Y"), sec.getDouble("location.Z"));
     }
     void saveData(FileConfiguration config, String section, BetterSiege betterSiege) {
@@ -32,18 +31,19 @@ public class Catapult {
         data.add(0, Integer.toString(health));
         data.add(1, Integer.toString(charge));
         data.add(2, Integer.toString(ammunition));
-        data.add(3, direction);
         sec.set("location.World" , l.getWorld().getName());
         sec.set("location.X" , l.getX());
         sec.set("location.Y" , l.getY());
         sec.set("location.Z" , l.getZ());
+        sec.getConfigurationSection(section);
         betterSiege.saveConfig();
     }
-    void setLocation(Location loc) {
+    void setLocation(Location loc, List<Location> bloc) {
         l = loc;
+        blocks = bloc;
     }
-    void setDirection(String direc) {
-        direction = direc;
+    List<Location> getBlocks() {
+        return blocks;
     }
     boolean addDamage(int amount) {
         health = health - amount;

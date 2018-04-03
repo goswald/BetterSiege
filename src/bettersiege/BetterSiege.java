@@ -3,6 +3,7 @@ package bettersiege;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -20,6 +21,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Arrow;
 import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -41,6 +43,8 @@ public class BetterSiege extends JavaPlugin implements Listener {
     ArrayList<Wall> wallList = new ArrayList<>();
     HashMap<Player, ArrayList<Block>> constructWallMap = new HashMap<>();
     ArrayList<Player> constructWallList = new ArrayList<>();
+    HashMap<Player, Integer> repairWallMap = new HashMap<>();
+    ArrayList<Player> repairCatapultList = new ArrayList<>();
     static final Logger BetterSiegeLogger = Bukkit.getLogger();
     ScheduledExecutorService sES = Executors.newScheduledThreadPool(2);
     //For catapults.
@@ -69,18 +73,27 @@ public class BetterSiege extends JavaPlugin implements Listener {
                 try {
                     //Not all things that say catapult meet the requirements to be a catapult -- the sign placed with proper perms and a correct structure
                     if(CatapultMap.containsKey(e.getClickedBlock().getLocation()) && f.isCatapult(e.getClickedBlock().getLocation())) {
-                        if(e.getPlayer().hasPermission("BetterSiege.*") || e.getPlayer().hasPermission("BetterSiege.Catapult")) {
-                            Inventory catapultInventory = Bukkit.createInventory(e.getPlayer(), 9, "Catapult");
-                            int ammunition = CatapultMap.get(e.getClickedBlock().getLocation()).ammunition;
-                            int i = 0;
-                            while(ammunition > 0) {
-                                catapultInventory.setItem(i, new ItemStack(Material.STONE, 16));
+                        if(!repairCatapultList.contains(e.getPlayer())) {
+                            if(e.getPlayer().hasPermission("BetterSiege.*") || e.getPlayer().hasPermission("BetterSiege.Catapult")) {
+                                Inventory catapultInventory = Bukkit.createInventory(e.getPlayer(), 9, "Catapult");
+                                int ammunition = CatapultMap.get(e.getClickedBlock().getLocation()).ammunition;
+                                int i = 0;
+                                while(ammunition > 0) {
+                                    catapultInventory.setItem(i, new ItemStack(Material.STONE, 16));
+                                }
+                                e.getPlayer().openInventory(catapultInventory);
+                                pCatapultMap.put(e.getPlayer(), CatapultMap.get(e.getClickedBlock().getLocation()));
+                                e.getPlayer().sendMessage("You are now operating the catapult.");
                             }
-                            e.getPlayer().openInventory(catapultInventory);
-                            pCatapultMap.put(e.getPlayer(), CatapultMap.get(e.getClickedBlock().getLocation()));
-                            e.getPlayer().sendMessage("You are now operating the catapult.");
+                            else e.getPlayer().sendMessage("You cannot operate a catapult.");
                         }
-                        else e.getPlayer().sendMessage("You cannot operate a catapult.");
+                        else {
+                            if(e.getPlayer().hasPermission("BetterSiege.*") || e.getPlayer().hasPermission("BetterSiege.buildCatapult")) {
+                                CatapultMap.get(e.getClickedBlock().getLocation()).addHealth(10);
+                                repairCatapultList.remove(e.getPlayer());
+                                e.getPlayer().sendMessage("You repaired the catapult.");
+                            }
+                        }
                     }
                 }
                 finally {
@@ -114,6 +127,15 @@ public class BetterSiege extends JavaPlugin implements Listener {
                     ArrayList<Block> wallList = new ArrayList<>();
                     wallList.add(e.getClickedBlock());
                     constructWallMap.put(e.getPlayer(), wallList);
+                }
+            }
+            if(repairWallMap.containsKey(e.getPlayer())) {
+                for(int i = 0; i < wallList.size(); i++) {
+                    if(wallList.get(i).insideWall(e.getClickedBlock())) {
+                        wallList.get(i).repairWall(repairWallMap.get(e.getPlayer()));
+                        repairWallMap.remove(e.getPlayer());
+                        e.getPlayer().sendMessage("You have healed the ward.");
+                    }
                 }
             }
         }
@@ -158,6 +180,35 @@ public class BetterSiege extends JavaPlugin implements Listener {
                         }
                     }
                 }
+            }
+        }
+        //Handles events where projectiles hit a siege weapon
+        if(e.getHitBlock() != null && e.getEntity() instanceof Arrow) {
+            l.lock();
+            try {
+                Iterator<Catapult> catapults = CatapultMap.values().iterator();
+                while(catapults.hasNext()) {
+                    Catapult c = catapults.next();
+                    List<Location> blocks = c.getBlocks();
+                    for(int i = 0; i < blocks.size(); i++) {
+                        if(blocks.get(i).equals(e.getHitBlock().getLocation())) {
+                            Arrow a = (Arrow)e.getEntity();
+                            if(a.isCritical()) {
+                                if(c.addDamage(15)) {
+                                    c.end();
+                                }
+                            }
+                            else {
+                                if(c.addDamage(10)) {
+                                    c.end();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            finally {
+                l.unlock();
             }
         }
     }
@@ -241,12 +292,23 @@ public class BetterSiege extends JavaPlugin implements Listener {
             
         }
         if(commandLabel.equalsIgnoreCase("cRepair")) {
-            
+            if(theSender instanceof Player) {
+                if(theSender.hasPermission("BetterSiege.*") || theSender.hasPermission("BetterSiege.buildCatapult")) {
+                    Player p = (Player)theSender;
+                    l.lock();
+                    try {
+                        repairCatapultList.add(p);
+                        p.sendMessage("Interact with the catapult sign to repair it.");
+                    }
+                    finally {
+                        l.unlock();
+                    }
+                }
+            }
         }
         if(commandLabel.equalsIgnoreCase("wBuild")) {
             if(theSender instanceof Player) {
-                if(theSender.hasPermission("BetterSiege.*") || theSender.hasPermission("BetterSiege.Wall"))
-                {
+                if(theSender.hasPermission("BetterSiege.*") || theSender.hasPermission("BetterSiege.Wall")) {
                     l2.lock();
                     try {
                         Player p = (Player)theSender;
@@ -260,7 +322,18 @@ public class BetterSiege extends JavaPlugin implements Listener {
             }
         }
         if(commandLabel.equalsIgnoreCase("wRepair")) {
-            
+            if(theSender instanceof Player) {
+                if(theSender.hasPermission("BetterSiege.*") || theSender.hasPermission("BetterSiege.Wall")) {
+                    if(args.length == 1) {
+                        Player p = (Player)theSender;
+                        if(p.getHealth() - Integer.parseInt(args[0]) > 0) {
+                            p.setHealth(p.getHealth() - Integer.parseInt(args[0]));
+                            repairWallMap.put((Player)theSender, Integer.parseInt(args[0]));
+                            p.sendMessage("Interact with a part of ward to repair it.");
+                        }
+                    }
+                }
+            }
         }
         return true;
     }
@@ -280,7 +353,9 @@ public class BetterSiege extends JavaPlugin implements Listener {
                             p.setHealth(c.getHealth());
                             p.setFoodLevel(c.addCharge());
                         }
-                        else pCatapultMap.remove(p);
+                        else {
+                            pCatapultMap.remove(p);
+                        }
                     }
                 }
             }

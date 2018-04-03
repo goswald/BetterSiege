@@ -2,6 +2,8 @@ package bettersiege;
 
 import java.util.ArrayList;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -51,7 +53,7 @@ public class Functions {
     }
     //Gives the bottom back left, bottom back right, top forward left, top forward right, top back left, top back right, bottom forward left, and bottom forward right blocks in order
     Block[] sortBlocks(ArrayList<Block> blockList) {
-        Block[] blockArray = new Block[4];
+        Block[] blockArray = new Block[8];
         Block bottomBackLeft = blockList.get(0);
         for(int i = 0; i < blockList.size(); i++) {
             if(blockList.get(i).getX() < bottomBackLeft.getX()) {
@@ -88,6 +90,64 @@ public class Functions {
             }
         }
         blockArray[3] = topForwardRight;
+        Block topBackLeft = blockList.get(0);
+        for(int i = 0; i < blockList.size(); i++) {
+            if(blockList.get(i).getX() < topBackLeft.getX()) {
+                if(blockList.get(i).getY() < topBackLeft.getY()) {
+                    if(blockList.get(i).getZ() > topBackLeft.getZ()) topBackLeft = blockList.get(i);
+                }
+            }
+        }
+        blockArray[4] = topBackLeft;
+        Block topBackRight = blockList.get(0);
+        for(int i = 0; i < blockList.size(); i++) {
+            if(blockList.get(i).getX() > topBackRight.getX()) {
+                if(blockList.get(i).getY() < topBackRight.getY()) {
+                    if(blockList.get(i).getZ() > topBackRight.getZ()) topBackRight = blockList.get(i);
+                }
+            }
+        }
+        blockArray[5] = topBackRight;
+        Block bottomForwardLeft = blockList.get(0);
+        for(int i = 0; i < blockList.size(); i++) {
+            if(blockList.get(i).getX() > bottomForwardLeft.getX()) {
+                if(blockList.get(i).getY() < bottomForwardLeft.getY()) {
+                    if(blockList.get(i).getZ() > bottomForwardLeft.getZ()) bottomForwardLeft = blockList.get(i);
+                }
+            }
+        }
+        blockArray[6] = bottomForwardLeft;
+        Block bottomForwardRight = blockList.get(0);
+        for(int i = 0; i < blockList.size(); i++) {
+            if(blockList.get(i).getX() > bottomForwardRight.getX()) {
+                if(blockList.get(i).getY() < bottomForwardRight.getY()) {
+                    if(blockList.get(i).getZ() > bottomForwardRight.getZ()) bottomForwardRight = blockList.get(i);
+                }
+            }
+        }
+        blockArray[7] = bottomForwardRight;
         return blockArray;
+    }
+    ArrayList<Block> getWallMaterials(World world, Block[] blockArray) {
+        int maxX = blockArray[1].getX();
+        int maxY = blockArray[0].getY();
+        int maxZ = blockArray[4].getZ();
+        ArrayList<Block> blockList = new ArrayList<>();
+        for(int minX = blockArray[0].getX(); minX <= maxX; minX++) {
+            for(int minY = blockArray[6].getY(); minY <= maxY; minY++) {
+                for(int minZ = blockArray[0].getZ(); minZ <= maxZ; minZ++) blockList.add(new Location(world, minX, minY, minZ).getBlock());
+            }
+        }
+        return blockList;
+    }
+    int calculateMaxHealth(ArrayList<Block> blockList) {
+        int health = 0;
+        for(int i = 0; i < blockList.size(); i++) {
+            if(blockList.get(i).getType() == Material.AIR) health = health - 5;
+            else {
+                
+            }
+        }
+        return health;
     }
 }

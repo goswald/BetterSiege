@@ -12,3 +12,5 @@ permissions:
     default: false
   BetterSiege.Catapult:
     default: false
+  BetterSiege.Wall:
+    default: false

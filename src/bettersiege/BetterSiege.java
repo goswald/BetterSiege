@@ -11,7 +11,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Server;
+import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
@@ -22,9 +26,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryInteractEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.Vector;
 
 public class BetterSiege extends JavaPlugin implements Listener {
     //Useful things for the entire class
@@ -63,6 +70,13 @@ public class BetterSiege extends JavaPlugin implements Listener {
                     //Not all things that say catapult meet the requirements to be a catapult -- the sign placed with proper perms and a correct structure
                     if(CatapultMap.containsKey(e.getClickedBlock().getLocation()) && f.isCatapult(e.getClickedBlock().getLocation())) {
                         if(e.getPlayer().hasPermission("BetterSiege.*") || e.getPlayer().hasPermission("BetterSiege.Catapult")) {
+                            Inventory catapultInventory = Bukkit.createInventory(e.getPlayer(), 9, "Catapult");
+                            int ammunition = CatapultMap.get(e.getClickedBlock().getLocation()).ammunition;
+                            int i = 0;
+                            while(ammunition > 0) {
+                                catapultInventory.setItem(i, new ItemStack(Material.STONE, 16));
+                            }
+                            e.getPlayer().openInventory(catapultInventory);
                             pCatapultMap.put(e.getPlayer(), CatapultMap.get(e.getClickedBlock().getLocation()));
                             e.getPlayer().sendMessage("You are now operating the catapult.");
                         }
@@ -88,7 +102,7 @@ public class BetterSiege extends JavaPlugin implements Listener {
                         if(e.getClickedBlock() instanceof Sign) {
                             wallListLocal.add(e.getClickedBlock());
                             constructWallMap.put(e.getPlayer(), wallListLocal);
-                            sES.schedule(new wallRunnable(e.getPlayer()), 1, TimeUnit.MILLISECONDS);
+                            sES.schedule(new wallRunnable(e.getPlayer(), this.getServer()), 1, TimeUnit.MILLISECONDS);
                             e.getPlayer().sendMessage("Please wait while the ward is constructed.");
                         }
                         else {
@@ -115,21 +129,37 @@ public class BetterSiege extends JavaPlugin implements Listener {
             if(block.getCustomName() != null) {
                 if(block.getCustomName().equalsIgnoreCase("Catapult Stone")) {
                     if(e.getHitBlock() != null) {
+                        boolean isWall = false;
                         Block hitBlock = e.getHitBlock();
                         l2.lock();
                         try {
-                            
+                            for(int i = 0; i < wallList.size(); i++) {
+                                if(wallList.get(i).insideWall(hitBlock)) {
+                                    if(wallList.get(i).damageWall(20) <= 0) {
+                                        wallList.remove(i);
+                                    }
+                                    isWall = true;
+                                    i = wallList.size();
+                                }
+                            }
                         }
                         finally {
                             l2.unlock();
+                        }
+                        if(!isWall) {
+                            e.getHitBlock().setType(Material.AIR);
+                            new Location(e.getHitBlock().getWorld(), e.getHitBlock().getX() + 1, e.getHitBlock().getY(), e.getHitBlock().getZ()).getBlock().setType(Material.AIR);
+                            new Location(e.getHitBlock().getWorld(), e.getHitBlock().getX() - 1, e.getHitBlock().getY(), e.getHitBlock().getZ()).getBlock().setType(Material.AIR);
+                            new Location(e.getHitBlock().getWorld(), e.getHitBlock().getX(), e.getHitBlock().getY() + 1, e.getHitBlock().getZ()).getBlock().setType(Material.AIR);
+                            new Location(e.getHitBlock().getWorld(), e.getHitBlock().getX(), e.getHitBlock().getY() - 1, e.getHitBlock().getZ()).getBlock().setType(Material.AIR);
+                            new Location(e.getHitBlock().getWorld(), e.getHitBlock().getX(), e.getHitBlock().getY(), e.getHitBlock().getZ() + 1).getBlock().setType(Material.AIR);
+                            new Location(e.getHitBlock().getWorld(), e.getHitBlock().getX(), e.getHitBlock().getY(), e.getHitBlock().getZ() - 1).getBlock().setType(Material.AIR);
+                            e.getHitBlock().getWorld().playSound(e.getHitBlock().getLocation(), Sound.BLOCK_ANVIL_BREAK, 2, 0.5F);
                         }
                     }
                 }
             }
         }
-        Location loc = e.getEntity().getLocation();
-        Vector vec = e.getEntity().getVelocity();
-        Location loc2 = new Location(loc.getWorld(), loc.getX()+vec.getX(), loc.getY()+vec.getY(), loc.getZ()+vec.getZ());
     }
     @EventHandler 
     public void onEntityHitEntity(EntityDamageByEntityEvent e) {
@@ -139,6 +169,45 @@ public class BetterSiege extends JavaPlugin implements Listener {
             if(block.getCustomName() != null) {
                 if(block.getCustomName().equalsIgnoreCase("Catapult Stone")) {
                     e.setDamage(20);
+                }
+            }
+        }
+    }
+    //Prevents putting anything but a 16 stack of stone into a catapult slot.
+    @EventHandler
+    public void onInventoryClick(InventoryInteractEvent e) {
+        if(e.getInventory().getName() != null) {
+            if(e.getInventory().getName().equalsIgnoreCase("Catapult")) {
+                for(int i = 0; i < e.getInventory().getSize(); i++) {
+                    if(e.getInventory().getItem(i).getType() != Material.STONE) {
+                        if(e.getInventory().getItem(i).getType() != Material.AIR) e.setCancelled(true);
+                    }
+                    else {
+                        if(e.getInventory().getItem(i).getAmount() != 16) {
+                            e.setCancelled(true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    //Calculates ammunition.
+    @EventHandler
+    public void onExitInventory(InventoryCloseEvent e) {
+        if(e.getInventory().getName() != null) {
+            if(e.getInventory().getName().equalsIgnoreCase("Catapult")) {
+                l.lock();
+                try {
+                    int amount = 0;
+                    for(int i = 0; i < e.getInventory().getSize(); i++) {
+                        if(e.getInventory().getItem(i).getType() == Material.STONE) {
+                            amount = amount + 16;
+                        }
+                    }
+                    pCatapultMap.get((Player)e.getPlayer()).setAmmunition(amount);
+                }
+                finally {
+                    l.unlock();
                 }
             }
         }
@@ -169,6 +238,28 @@ public class BetterSiege extends JavaPlugin implements Listener {
             }
         }
         if(commandLabel.equalsIgnoreCase("cFire")) {
+            
+        }
+        if(commandLabel.equalsIgnoreCase("cRepair")) {
+            
+        }
+        if(commandLabel.equalsIgnoreCase("wBuild")) {
+            if(theSender instanceof Player) {
+                if(theSender.hasPermission("BetterSiege.*") || theSender.hasPermission("BetterSiege.Wall"))
+                {
+                    l2.lock();
+                    try {
+                        Player p = (Player)theSender;
+                        p.sendMessage("Hit a corner of the wall, or the sign if this is the final step.");
+                        constructWallList.add(p);
+                    }
+                    finally {
+                        l2.unlock();
+                    }
+                }
+            }
+        }
+        if(commandLabel.equalsIgnoreCase("wRepair")) {
             
         }
         return true;
@@ -203,9 +294,12 @@ public class BetterSiege extends JavaPlugin implements Listener {
         Player p;
         ArrayList<Block> blockList;
         Sign ward;
+        Block wardBlock;
+        Server s;
         
-        wallRunnable(Player player) {
+        wallRunnable(Player player, Server server) {
             p = player;
+            s = server;
         };
         @Override
         public void run() {
@@ -213,6 +307,7 @@ public class BetterSiege extends JavaPlugin implements Listener {
             try {
                 blockList = constructWallMap.get(p);
                 ward = (Sign)blockList.get(8);
+                wardBlock = blockList.get(8);
                 blockList.remove(8);
                 constructWallMap.remove(p);
             }
@@ -226,7 +321,27 @@ public class BetterSiege extends JavaPlugin implements Listener {
                 Logger.getLogger(BetterSiege.class.getName()).log(Level.SEVERE, null, ex);
             }
             Block[] blockArray = f.sortBlocks(blockList);
-            
+            ArrayList<Block> newBlockList = f.getWallMaterials(blockArray[0].getWorld(), blockArray);
+            try {
+                this.wait(1000);
+            } 
+            catch (InterruptedException ex) {
+                Logger.getLogger(BetterSiege.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            int health = f.calculateMaxHealth(newBlockList);
+            try {
+                this.wait(5000);
+            } 
+            catch (InterruptedException ex) {
+                Logger.getLogger(BetterSiege.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            Wall w = new Wall();
+            w.createWall(blockArray, health, wardBlock);
+            ward.setLine(0, ChatColor.GOLD + "-WARD-");
+            ward.setLine(1, ChatColor.BLACK + "HEALTH:");
+            ward.setLine(2, ChatColor.GOLD + Integer.toString(w.damageWall(0)));
+            ward.setLine(3, ChatColor.BLACK + Integer.toString(w.damageWall(0)));
+            p.sendMessage("The wall has been constructed.");
         }
     }
 }
